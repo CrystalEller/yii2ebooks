@@ -10,8 +10,6 @@ use Yii;
  * @property integer $id
  * @property string $name
  * @property integer $frequency
- *
- * @property BookTag[] $bookTags
  */
 class Tag extends \yii\db\ActiveRecord
 {

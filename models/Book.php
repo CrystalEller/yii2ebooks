@@ -12,7 +12,6 @@ use yii\db\ActiveRecord;
  * @property string $title
  * @property string $description
  * @property double $raiting
- * @property string $tags
  * @property integer $publisherId
  * @property string $year
  * @property string $ISBN
@@ -29,9 +28,9 @@ use yii\db\ActiveRecord;
  */
 class Book extends ActiveRecord
 {
-    public $newLinkTags;
-    public $newLinkAuthors;
-    public $newLinkFormats;
+    public $tags;
+    public $authors;
+    public $formats;
 
     /**
      * @inheritdoc
@@ -54,16 +53,16 @@ class Book extends ActiveRecord
             [['ISBN'], 'string', 'max' => 45],
 
             [['publisherId', 'pages', 'categoryId', 'languageId', 'year'], 'integer'],
-            [['year'], 'number', 'max' => 9999, 'min' => 1],
-            [['raiting'], 'number', 'max' => 5, 'min' => 1],
+            ['year', 'number', 'max' => 9999, 'min' => 1],
+            ['raiting', 'number', 'max' => 5, 'min' => 1],
 
             ['publisherId', 'exist', 'targetClass' => 'app\models\Publisher', 'targetAttribute' => 'id'],
             ['categoryId', 'exist', 'targetClass' => 'app\models\Category', 'targetAttribute' => 'id'],
             ['languageId', 'exist', 'targetClass' => 'app\models\Language', 'targetAttribute' => 'id'],
 
-            ['newLinkTags', 'exist', 'targetClass' => 'app\models\Tag', 'targetAttribute' => 'id', 'allowArray' => true],
-            ['newLinkAuthors', 'exist', 'targetClass' => 'app\models\Author', 'targetAttribute' => 'id', 'allowArray' => true],
-            ['newLinkFormats', 'exist', 'targetClass' => 'app\models\Format', 'targetAttribute' => 'id', 'allowArray' => true],
+            ['tags', 'exist', 'targetClass' => 'app\models\Tag', 'targetAttribute' => 'id', 'allowArray' => true],
+            ['authors', 'exist', 'targetClass' => 'app\models\Author', 'targetAttribute' => 'id', 'allowArray' => true],
+            ['formats', 'exist', 'targetClass' => 'app\models\Format', 'targetAttribute' => 'id', 'allowArray' => true],
 
         ];
     }
@@ -104,10 +103,50 @@ class Book extends ActiveRecord
         }
     }
 
+    public function afterSave($insert, $changedAttributes)
+    {
+        if (!empty($this->authors)) {
+            $authorInsert = [];
+            foreach ($this->authors as $author) {
+                array_push($authorInsert, [$author, $this->id]);
+            }
+
+            Yii::$app->db->createCommand()
+                ->batchInsert('author_book', ['authorId', 'bookId'], $authorInsert)
+                ->execute();
+        }
+
+        if (!empty($this->formats)) {
+            $formatInsert = [];
+            foreach ($this->formats as $format) {
+                array_push($formatInsert, [$format, $this->id]);
+            }
+
+            Yii::$app->db->createCommand()
+                ->batchInsert('book_format', ['formatId', 'bookId'], $formatInsert)
+                ->execute();
+        }
+
+        if (!empty($this->tags)) {
+            $tagInsert = [];
+            foreach ($this->tags as $tag) {
+                array_push($tagInsert, [$tag, $this->id]);
+            }
+
+            Yii::$app->db->createCommand()
+                ->batchInsert('book_tag', ['tagId', 'bookId'], $tagInsert)
+                ->execute();
+
+            Tag::updateAllCounters(['frequency' => 1],['id' => array_map('intval',$this->tags)]);
+        }
+
+        parent::afterSave($insert, $changedAttributes);
+    }
+
     /**
      * @return \yii\db\ActiveQuery
      */
-    public function getAuthors()
+    public function getBookAuthors()
     {
         return $this->hasMany(Author::className(), ['id' => 'authorId'])
             ->viaTable('author_book', ['bookId' => 'id']);
@@ -116,7 +155,7 @@ class Book extends ActiveRecord
     /**
      * @return \yii\db\ActiveQuery
      */
-    public function getCategory()
+    public function getBookCategory()
     {
         return $this->hasOne(Category::className(), ['id' => 'categoryId']);
     }
@@ -124,7 +163,7 @@ class Book extends ActiveRecord
     /**
      * @return \yii\db\ActiveQuery
      */
-    public function getLanguage()
+    public function getBookLanguage()
     {
         return $this->hasOne(Language::className(), ['id' => 'languageId']);
     }
@@ -132,7 +171,7 @@ class Book extends ActiveRecord
     /**
      * @return \yii\db\ActiveQuery
      */
-    public function getPublisher()
+    public function getBookPublisher()
     {
         return $this->hasOne(Publisher::className(), ['id' => 'publisherId']);
     }
@@ -140,7 +179,7 @@ class Book extends ActiveRecord
     /**
      * @return \yii\db\ActiveQuery
      */
-    public function getFormats()
+    public function getBookFormats()
     {
         return $this->hasMany(Format::className(), ['id' => 'formatId'])
             ->viaTable('book_format', ['bookId' => 'id']);
@@ -149,7 +188,7 @@ class Book extends ActiveRecord
     /**
      * @return \yii\db\ActiveQuery
      */
-    public function getTags()
+    public function getBookTags()
     {
         return $this->hasMany(Tag::className(), ['id' => 'tagId'])
             ->viaTable('book_tag', ['bookId' => 'id']);
