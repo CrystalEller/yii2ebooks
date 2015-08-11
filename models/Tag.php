@@ -44,6 +44,31 @@ class Tag extends \yii\db\ActiveRecord
         ];
     }
 
+    public static function findTagWeights($limit = 20)
+    {
+        $models = Tag::find()->orderBy(['frequency'=>SORT_DESC])->limit($limit)->all();
+
+        $total = 0;
+        foreach ($models as $model) {
+            $total += $model->frequency;
+        }
+
+        $tags = array();
+
+        if ($total > 0) {
+            foreach ($models as $model) {
+                if($model->frequency>0) {
+                    $tags[$model->name] = 8 + (int)(16 * $model->frequency / ($total + 10));
+                } else {
+                    $tags[$model->name]=0;
+                }
+            }
+            ksort($tags);
+        }
+
+        return $tags;
+    }
+
     /**
      * @return \yii\db\ActiveQuery
      */
