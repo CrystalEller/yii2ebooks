@@ -13,7 +13,7 @@ use yii\db\ActiveRecord;
  * @property string $description
  * @property double $raiting
  * @property integer $publisherId
- * @property string $year
+ * @property integer $year
  * @property string $ISBN
  * @property integer $pages
  * @property integer $categoryId
@@ -90,6 +90,19 @@ class Book extends ActiveRecord
         ];
     }
 
+    public function beforeDelete()
+    {
+        if (parent::beforeDelete()) {
+            Tag::updateAllCounters(
+                ['frequency' => -1],
+                ['id' => $this->getBookTags()->select(['id'])->asArray()->all()]
+            );
+
+            return true;
+        } else {
+            return false;
+        }
+    }
 
     public function beforeSave($insert)
     {
@@ -105,6 +118,18 @@ class Book extends ActiveRecord
 
     public function afterSave($insert, $changedAttributes)
     {
+        if (!$insert) {
+            Yii::$app->db->createCommand()
+                ->delete('author_book',['bookId'=>$this->id])
+                ->execute();
+            Yii::$app->db->createCommand()
+                ->delete('book_format',['bookId'=>$this->id])
+                ->execute();
+            Yii::$app->db->createCommand()
+                ->delete('book_tag',['bookId'=>$this->id])
+                ->execute();
+        }
+
         if (!empty($this->authors)) {
             $authorInsert = [];
             foreach ($this->authors as $author) {
@@ -137,7 +162,7 @@ class Book extends ActiveRecord
                 ->batchInsert('book_tag', ['tagId', 'bookId'], $tagInsert)
                 ->execute();
 
-            Tag::updateAllCounters(['frequency' => 1],['id' => array_map('intval',$this->tags)]);
+            Tag::updateAllCounters(['frequency' => 1], ['id' => array_map('intval', $this->tags)]);
         }
 
         parent::afterSave($insert, $changedAttributes);
