@@ -133,7 +133,7 @@ jQuery(document).ready(function () {
         that.selectpicker('refresh');
     });
 
-    $("#book-form").on('keypress', 'input[type="text"], textarea', function (e) {
+    $("#book-form").on('keypress', 'input[type="text"], input[type="number"], textarea', function (e) {
         var $target = $(e.target);
 
         delay(function () {
@@ -153,11 +153,15 @@ jQuery(document).ready(function () {
             });
         }, 800);
     }).on('change', 'select', function (e) {
-        var $target = $(e.target);
+        var $target = $(e.target),
+            formFields = {},
+            selected=[];
 
-        var formFields = {};
+        $target.find(":selected").each(function(index, elem){
+            selected.push($(elem).val());
+        });
 
-        formFields[$target.attr('name')] = $target.val();
+        formFields[$target.attr('id')] = selected;
 
         $.ajax({
             type: 'POST',

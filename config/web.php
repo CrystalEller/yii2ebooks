@@ -42,6 +42,7 @@ $config = [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
             'rules' => [
+                '<controller:\w+>/<action:\w+>/<id:\d+>' => '<controller>/<action>',
                 '<controller:\w+>/<action:\w+>' => '<controller>/<action>'
             ],
         ],
@@ -51,31 +52,31 @@ $config = [
     'controllerMap' => array(
         'book' => 'app\controllers\BookController',
         'tag' => array(
-            'class' => 'app\controllers\JsonCRUDController',
+            'class' => 'app\controllers\json\JsonCRUDController',
             'modelName' => 'Tag',
         ),
         'author' => array(
-            'class' => 'app\controllers\JsonCRUDController',
+            'class' => 'app\controllers\json\JsonCRUDController',
             'modelName' => 'Author',
         ),
         'format' => array(
-            'class' => 'app\controllers\JsonCRUDController',
+            'class' => 'app\controllers\json\JsonCRUDController',
             'modelName' => 'Format',
         ),
         'language' => array(
-            'class' => 'app\controllers\JsonCRUDController',
+            'class' => 'app\controllers\json\JsonCRUDController',
             'modelName' => 'Language',
         ),
         'category' => array(
-            'class' => 'app\controllers\JsonCRUDController',
+            'class' => 'app\controllers\json\JsonCRUDController',
             'modelName' => 'Category',
         ),
         'publisher' => array(
-            'class' => 'app\controllers\JsonCRUDController',
+            'class' => 'app\controllers\json\JsonCRUDController',
             'modelName' => 'Publisher',
         ),
         'form' => array(
-            'class' => 'ext.json_api.JsonFormController'
+            'class' => 'app\controllers\json\JsonFormController'
         ),
     ),
 ];

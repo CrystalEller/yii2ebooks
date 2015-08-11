@@ -15,9 +15,7 @@ $this->registerCssFile("/css/bootstrap-select/bootstrap-select.min.css");
 $this->registerJsFile('/js/bootstrap-select/bootstrap-select.min.js', ['depends' => [\yii\web\JqueryAsset::className()]]);
 $this->registerJsFile('/js/book/form.js', ['depends' => [\yii\web\JqueryAsset::className()]]);
 
-/* @var $this yii\web\View */
-/* @var $model app\models\Book */
-/* @var $form yii\widgets\ActiveForm */
+$formData = Yii::$app->session['book-form'];
 ?>
 
 <form id="book-form"
@@ -26,15 +24,16 @@ $this->registerJsFile('/js/book/form.js', ['depends' => [\yii\web\JqueryAsset::c
       enctype="multipart/form-data"
       method="post">
     <input type="hidden" id="formId" name="formId" value="book-form"
-           data-url="<?php echo URL::toRoute('form/saveFormParam', true); ?>">
+           data-url="<?php echo URL::toRoute('form/save', true); ?>">
 
-    <input type="hidden" name="_csrf" value="<?=Yii::$app->request->getCsrfToken()?>" />
+    <input type="hidden" name="_csrf" value="<?= Yii::$app->request->getCsrfToken() ?>"/>
 
     <div class="form-group">
         <label for="title" class="col-lg-2 control-label">Title</label>
 
         <div class="col-lg-10">
-            <input type="text" class="form-control" name="title" value="<?php echo Html::encode($model->title); ?>"
+            <input type="text" class="form-control" name="title"
+                   value="<?php echo Html::encode($model->title ?: !empty($formData['title']) ? $formData['title'] : ''); ?>"
                    id="title">
         </div>
     </div>
@@ -43,7 +42,7 @@ $this->registerJsFile('/js/book/form.js', ['depends' => [\yii\web\JqueryAsset::c
 
         <div class="col-lg-10">
                 <textarea class="form-control" name="description" id="description" rows="8"
-                    ><?php echo nl2br(Html::encode($model->description)); ?></textarea>
+                    ><?php echo nl2br(Html::encode($model->description ?: !empty($formData['description']) ? $formData['description'] : '')); ?></textarea>
         </div>
     </div>
     <div class="form-group">
@@ -56,8 +55,10 @@ $this->registerJsFile('/js/book/form.js', ['depends' => [\yii\web\JqueryAsset::c
                     data-live-search="true">
                 <?php $rows = Category::find()->all(); ?>
                 <?php foreach ($rows as $row): ?>
-                    <?php if (!empty($model->category)): ?>
-                        <?php $selectedRow = $model->category->id === $row->id; ?>
+                    <?php if (!empty($model->bookCategory)): ?>
+                        <?php $selectedRow = $model->bookCategory->id === $row->id; ?>
+                    <?php elseif (!empty($formData['category'])): ?>
+                        <?php $selectedRow = $row->id == $formData['category'][0]; ?>
                     <?php endif; ?>
                     <option
                         value="<?php echo $row->id; ?>" <?php echo !empty($selectedRow) ? 'selected="selected"' : ''; ?>>
@@ -86,8 +87,10 @@ $this->registerJsFile('/js/book/form.js', ['depends' => [\yii\web\JqueryAsset::c
                     data-live-search="true">
                 <?php $rows = Publisher::find()->all(); ?>
                 <?php foreach ($rows as $row): ?>
-                    <?php if (!empty($model->publisher)): ?>
-                        <?php $selectedRow = $model->publisher->id === $row->id; ?>
+                    <?php if (!empty($model->bookPublisher)): ?>
+                        <?php $selectedRow = $model->bookPublisher->id === $row->id; ?>
+                    <?php elseif (!empty($formData['publisher'])): ?>
+                        <?php $selectedRow = $row->id == $formData['publisher'][0]; ?>
                     <?php endif; ?>
                     <option
                         value="<?php echo $row->id; ?>" <?php echo !empty($selectedRow) ? 'selected="selected"' : ''; ?>>
@@ -116,11 +119,15 @@ $this->registerJsFile('/js/book/form.js', ['depends' => [\yii\web\JqueryAsset::c
                     multiple data-selected-text-format="count>4">
                 <?php
                 $rows = Author::find()->all();
-                $authors = !empty($model->authors) ? $model->authors->asArray()->all() : array();
+                $authors = !empty($model->bookAuthors) ? array_column($model->getBookAuthors()->asArray()->all(), 'id') : array();
                 ?>
                 <?php foreach ($rows as $row): ?>
                     <?php if (!empty($authors)): ?>
                         <?php $selectedRow = in_array($row->id, $authors); ?>
+                    <?php elseif
+                    (!empty($formData['authors'])
+                    ): ?>
+                        <?php $selectedRow = in_array($row->id, $formData['authors']); ?>
                     <?php endif; ?>
                     <option
                         value="<?php echo $row->id; ?>" <?php echo !empty($selectedRow) ? 'selected="selected"' : ''; ?>>
@@ -151,11 +158,15 @@ $this->registerJsFile('/js/book/form.js', ['depends' => [\yii\web\JqueryAsset::c
                     data-selected-text-format="count>10">
                 <?php
                 $rows = Tag::find()->all();
-                $tags = !empty($model->tags) ? $model->tags->asArray()->all() : array();
+                $tags = !empty($model->bookTags) ? array_column($model->getBookTags()->asArray()->all(), 'id') : array();
                 ?>
                 <?php foreach ($rows as $row): ?>
                     <?php if (!empty($tags)): ?>
                         <?php $selectedRow = in_array($row->id, $tags); ?>
+                    <?php elseif
+                    (!empty($formData['tags'])
+                    ): ?>
+                        <?php $selectedRow = in_array($row->id, $formData['tags']); ?>
                     <?php endif; ?>
                     <option
                         value="<?php echo $row->id; ?>" <?php echo !empty($selectedRow) ? 'selected="selected"' : ''; ?>>
@@ -184,8 +195,10 @@ $this->registerJsFile('/js/book/form.js', ['depends' => [\yii\web\JqueryAsset::c
                     data-live-search="true">
                 <?php $rows = Language::find()->all(); ?>
                 <?php foreach ($rows as $row): ?>
-                    <?php if (!empty($model->language)): ?>
-                        <?php $selectedRow = $model->language->id === $row->id; ?>
+                    <?php if (!empty($model->bookLanguage)): ?>
+                        <?php $selectedRow = $model->bookLanguage->id === $row->id; ?>
+                    <?php elseif (!empty($formData['language'])): ?>
+                        <?php $selectedRow = $row->id == $formData['language'][0]; ?>
                     <?php endif; ?>
                     <option
                         value="<?php echo $row->id; ?>" <?php echo !empty($selectedRow) ? 'selected="selected"' : ''; ?>>
@@ -209,7 +222,7 @@ $this->registerJsFile('/js/book/form.js', ['depends' => [\yii\web\JqueryAsset::c
 
         <div class="col-lg-10">
             <input type="number" class="form-control" name="pages"
-                   value="<?php echo Html::encode($model->pages); ?>"
+                   value="<?php echo Html::encode($model->pages ?: !empty($formData['pages']) ? $formData['pages'] : ''); ?>"
                    id="pages">
         </div>
     </div>
@@ -217,7 +230,8 @@ $this->registerJsFile('/js/book/form.js', ['depends' => [\yii\web\JqueryAsset::c
         <label for="isbn" class="col-lg-2 control-label">ISBN</label>
 
         <div class="col-lg-10">
-            <input type="text" class="form-control" name="ISBN" value="<?php echo Html::encode($model->ISBN); ?>"
+            <input type="text" class="form-control" name="ISBN"
+                   value="<?php echo Html::encode($model->ISBN ?: !empty($formData['isbn']) ? $formData['isbn'] : ''); ?>"
                    id="isbn">
         </div>
     </div>
@@ -225,7 +239,8 @@ $this->registerJsFile('/js/book/form.js', ['depends' => [\yii\web\JqueryAsset::c
         <label for="year" class="col-lg-2 control-label">Year</label>
 
         <div class="col-lg-10">
-            <input type="number" class="form-control" name="year" value="<?php echo Html::encode($model->year); ?>"
+            <input type="number" class="form-control" name="year"
+                   value="<?php echo Html::encode($model->year ?: !empty($formData['year']) ? $formData['year'] : ''); ?>"
                    id="year">
         </div>
     </div>
