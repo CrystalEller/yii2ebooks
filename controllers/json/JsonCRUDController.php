@@ -4,6 +4,8 @@ namespace app\controllers\json;
 
 
 use yii\base\Exception;
+use yii\filters\AccessControl;
+use yii\filters\VerbFilter;
 use yii\web\Controller;
 use yii\web\Response;
 
@@ -18,6 +20,28 @@ class JsonCRUDController extends Controller
     private $model;
     private $modelNamespace = 'app\\models\\';
 
+    public function behaviors()
+    {
+        return [
+            'verbs' => [
+                'class' => VerbFilter::className(),
+                'actions' => [
+                    'delete' => ['post'],
+                ],
+            ],
+            'access' => [
+                'class' => AccessControl::className(),
+                'only' => ['create', 'update', 'delete'],
+                'rules' => [
+                    [
+                        'allow' => true,
+                        'actions' => ['create', 'update', 'delete'],
+                        'roles' => ['admin'],
+                    ],
+                ],
+            ],
+        ];
+    }
 
     public function init()
     {

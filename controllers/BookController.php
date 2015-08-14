@@ -2,18 +2,23 @@
 
 namespace app\controllers;
 
-use Yii;
 use app\models\Book;
+use Yii;
 use yii\data\ActiveDataProvider;
+use yii\filters\AccessControl;
+use yii\filters\VerbFilter;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
-use yii\filters\VerbFilter;
+use yii\web\Response;
+use yii\web\UploadedFile;
 
 /**
  * BookController implements the CRUD actions for Book model.
  */
 class BookController extends Controller
 {
+    public $layout = 'column1';
+
     public function behaviors()
     {
         return [
@@ -21,6 +26,17 @@ class BookController extends Controller
                 'class' => VerbFilter::className(),
                 'actions' => [
                     'delete' => ['post'],
+                ],
+            ],
+            'access' => [
+                'class' => AccessControl::className(),
+                'only' => ['create', 'update', 'delete'],
+                'rules' => [
+                    [
+                        'allow' => true,
+                        'actions' => ['create', 'update', 'delete'],
+                        'roles' => ['admin'],
+                    ],
                 ],
             ],
         ];
@@ -63,32 +79,29 @@ class BookController extends Controller
     {
         $model = new Book();
 
-        if(!empty(Yii::$app->request->post())){
+        if (!empty(Yii::$app->request->post())) {
             $model->setAttributes(Yii::$app->request->post());
-            $model->newLinkAuthors=Yii::$app->request->post('authors');
-            $model->newLinkTags=Yii::$app->request->post('tags');
-            $model->newLinkFormats=Yii::$app->request->post('formats');
+            $model->authors = Yii::$app->request->post('authors');
+            $model->tags = Yii::$app->request->post('tags');
+            $model->formats = Yii::$app->request->post('formats');
 
-            if($model->validate()){
-                $transaction = Book::getDb()->beginTransaction();
-                try {
-                    $model->save();
-                    // ...other DB operations...
-                    $transaction->commit();
-                } catch(\Exception $e) {
-                    $transaction->rollBack();
-                    throw $e;
-                }
+            if ($model->save()) {
+                $bookFiles = \Yii::$app->basePath . '/files/tmp/book-form/1/';
+                $imgFile = \Yii::$app->basePath . '/web/image/book/tmp/1/';
+
+                $this->copyFiles($bookFiles, \Yii::$app->basePath . '/files/books/' . $model->id . '/');
+                $this->copyFiles($imgFile, \Yii::$app->basePath . '/web/image/book/' . $model->id . '/');
+
+                $this->deleteFiles(\Yii::$app->basePath . '/files/tmp/book-form/1/');
+                $this->deleteFiles(\Yii::$app->basePath . '/web/image/book/tmp/1/');
+
+                return $this->redirect(['view', 'id' => $model->id]);
             }
         }
 
-        /*if ($model->load(Yii::$app->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
-        } else {*/
-            return $this->render('create', [
-                'model' => $model,
-            ]);
-        //}
+        return $this->render('create', [
+            'model' => $model,
+        ]);
     }
 
     /**
@@ -101,13 +114,30 @@ class BookController extends Controller
     {
         $model = $this->findModel($id);
 
-        if ($model->load(Yii::$app->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
-        } else {
-            return $this->render('update', [
-                'model' => $model,
-            ]);
+        if (!empty(Yii::$app->request->post())) {
+            $model->setAttributes(Yii::$app->request->post());
+            $model->authors = Yii::$app->request->post('authors');
+            $model->tags = Yii::$app->request->post('tags');
+            $model->formats = Yii::$app->request->post('formats');
+
+            if ($model->save()) {
+                $bookFiles = \Yii::$app->basePath . '/files/tmp/book-form/1/';
+                $imgFile = \Yii::$app->basePath . '/web/image/book/tmp/1/';
+
+                $this->copyFiles($bookFiles, \Yii::$app->basePath . '/files/books/' . $model->id . '/');
+                $this->copyFiles($imgFile, \Yii::$app->basePath . '/web/image/book/' . $model->id . '/');
+
+                $this->deleteFiles(\Yii::$app->basePath . '/files/tmp/book-form/1/');
+                $this->deleteFiles(\Yii::$app->basePath . '/web/image/book/tmp/1/');
+
+                return $this->redirect(['view', 'id' => $model->id]);
+            }
         }
+
+        return $this->render('update', [
+            'model' => $model,
+        ]);
+
     }
 
     /**
@@ -121,6 +151,62 @@ class BookController extends Controller
         $this->findModel($id)->delete();
 
         return $this->redirect(['index']);
+    }
+
+    public function actionFile()
+    {
+        \Yii::$app->response->format = Response::FORMAT_JSON;
+
+        if (\Yii::$app->request->isPost) {
+            $book = new Book();
+
+            $book->imageFile = UploadedFile::getInstanceByName('imageFile');
+            $book->bookFile = UploadedFile::getInstanceByName('bookFile');
+
+            if (!$book->validate(['imageFile', 'bookFile'])) {
+                \Yii::$app->response->statusCode = 400;
+
+                return ['status' => 'Err', 'errors' => $book->getErrors()];
+            } else {
+
+                if (!empty($book->imageFile)) {
+                    $fileDir = \Yii::$app->basePath . '/web/image/book/tmp/1/';
+                    if (!file_exists($fileDir)) {
+                        mkdir($fileDir, 0755, true);
+                    }
+
+                    array_map('unlink', glob(\Yii::$app->basePath . $fileDir . '*'));
+                    $book->imageFile
+                        ->saveAs($fileDir . $book->imageFile->baseName . '.' . $book->imageFile->extension);
+                }
+
+                if (!empty($book->bookFile)) {
+                    $fileDir = \Yii::$app->basePath . '/files/tmp/book-form/1/book-file/';
+                    if (!file_exists($fileDir)) {
+                        mkdir($fileDir, 0755, true);
+                    }
+
+                    $book->bookFile
+                        ->saveAs($fileDir . $book->bookFile->baseName . '.' . $book->bookFile->extension);
+                }
+
+                \Yii::$app->response->statusCode = 200;
+
+                return ['status' => 'OK'];
+            }
+        }
+
+        if (\Yii::$app->request->isGet) {
+            if (!empty(\Yii::$app->request->get('remove')) &&
+                !empty(\Yii::$app->request->get('file'))
+            ) {
+                unlink(\Yii::$app->basePath . '/files/tmp/book-form/1/book-file/' . \Yii::$app->request->get('file'));
+
+                \Yii::$app->response->statusCode = 200;
+
+                return ['status' => 'OK'];
+            }
+        }
     }
 
     /**
@@ -137,5 +223,34 @@ class BookController extends Controller
         } else {
             throw new NotFoundHttpException('The requested page does not exist.');
         }
+    }
+
+    protected function deleteFiles($target)
+    {
+        if (is_dir($target)) {
+            $files = glob($target . '*', GLOB_MARK);
+
+            foreach ($files as $file) {
+                $this->deleteFiles($file);
+            }
+
+            rmdir($target);
+        } elseif (is_file($target)) {
+            unlink($target);
+        }
+    }
+
+    protected function copyFiles($src, $dst)
+    {
+        if (file_exists($dst))
+            rrmdir($dst);
+        if (is_dir($src)) {
+            mkdir($dst);
+            $files = scandir($src);
+            foreach ($files as $file)
+                if ($file != "." && $file != "..")
+                    $this->copyFiles("$src/$file", "$dst/$file");
+        } else if (file_exists($src))
+            copy($src, $dst);
     }
 }

@@ -3,8 +3,12 @@
 namespace app\controllers\json;
 
 
+use app\models\Book;
+use app\models\Format;
+use yii\validators\FileValidator;
 use yii\web\Controller;
 use yii\web\Response;
+use yii\web\UploadedFile;
 
 class JsonFormController extends Controller
 {
