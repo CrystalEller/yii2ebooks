@@ -20,7 +20,9 @@ $config = [
         ],
         'user' => [
             'identityClass' => 'app\models\User',
-            'enableAutoLogin' => true,
+        ],
+        'authManager' => [
+            'class' => 'yii\rbac\PhpManager',
         ],
         'errorHandler' => [
             'errorAction' => 'site/error',
@@ -45,7 +47,9 @@ $config = [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
             'rules' => [
-                '<controller:\w+>/<action:\w+>/<id:\d+>' => '<controller>/<action>',
+                '/admin' => 'site/login',
+                '/admin/<controller:\w+>/<action:\w+>' => '<controller>/<action>',
+                '/admin/<controller:\w+>/<action:\w+>/<id:\d+>' => '<controller>/<action>',
                 '<controller:\w+>/<action:\w+>' => '<controller>/<action>'
             ],
         ],
