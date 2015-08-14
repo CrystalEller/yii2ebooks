@@ -70,13 +70,42 @@ jQuery(document).ready(function () {
         var input = this;
 
         if (input.files && input.files[0]) {
-            var reader = new FileReader();
+            var fileData = new FormData();
 
-            reader.onload = function (e) {
-                $('#image-wrapper img').attr('src', e.target.result);
-            };
+            fileData.append('imageFile', input.files[0]);
 
-            reader.readAsDataURL(input.files[0]);
+            $.ajax({
+                url: $('#image-wrapper img').data('url'),
+                type: "POST",
+                data: fileData,
+                processData: false,
+                contentType: false,
+                xhr: function () {
+                    var xhr = $.ajaxSettings.xhr();
+
+                    xhr.upload.onload = function () {
+                        var reader = new FileReader();
+
+                        reader.onload = function (e) {
+                            $('#image-wrapper img').attr('src', e.target.result);
+                        };
+
+                        reader.readAsDataURL(input.files[0]);
+                    };
+
+                    return xhr;
+                },
+                success: function (data) {
+                    if (data.errors) {
+                        for (var i in data.errors) {
+                            $.notify(data.errors[i], {
+                                className: 'error'
+                            });
+                        }
+                    }
+                }
+            });
+
         }
     });
 
@@ -112,19 +141,59 @@ jQuery(document).ready(function () {
                 var inputParent = $input.parent();
 
                 inputParent.after(inputParent.clone());
-                inputParent.removeClass('hide')
+                inputParent
+                    .find('.file-extension')
+                    .text(selected.text().toUpperCase() + ': ');
+                inputParent
+                    .removeClass('hide')
                     .find('.book-name')
-                    .text(selected.text().toUpperCase() + ': ' + input.files[0].name);
+                    .text(input.files[0].name);
                 inputParent
                     .find('.book-format')
                     .val(selected.text());
-                inputParent
-                    .find('.delete-file')
-                    .click(function () {
-                        var that = $(this);
 
-                        that.closest(".format-pattern").remove();
-                    });
+                $('.format-pattern .delete-file').click(deleteFile);
+
+                inputParent.find('*:not(.progress)').hide();
+
+                var fileData = new FormData();
+
+                fileData.append('bookFile', input.files[0]);
+
+                $.ajax({
+                    url: $('.format-pattern').data('url'),
+                    type: "POST",
+                    data: fileData,
+                    processData: false,
+                    contentType: false,
+                    xhr: function () {
+                        var xhr = $.ajaxSettings.xhr();
+
+                        xhr.upload.onprogress = function (evt) {
+                            var progress = evt.loaded / evt.total * 100;
+                            inputParent
+                                .find('.progress .progress-bar')
+                                .css('width', progress + '%')
+                                .text(progress);
+                        };
+
+                        xhr.upload.onload = function () {
+                            inputParent.find('*:not(.progress)').show();
+                            inputParent.find('.progress').hide();
+                        };
+
+                        return xhr;
+                    },
+                    success: function (data) {
+                        if (data.errors) {
+                            for (var i in data.errors) {
+                                $.notify(data.errors[i], {
+                                    className: 'error'
+                                });
+                            }
+                        }
+                    }
+                });
             }
         }).attr('accept', '.' + selected.text()).click();
 
@@ -132,6 +201,7 @@ jQuery(document).ready(function () {
         that.find('.empty').prop('selected', true);
         that.selectpicker('refresh');
     });
+
 
     $("#book-form").on('keypress', 'input[type="text"], input[type="number"], textarea', function (e) {
         var $target = $(e.target);
@@ -155,9 +225,9 @@ jQuery(document).ready(function () {
     }).on('change', 'select', function (e) {
         var $target = $(e.target),
             formFields = {},
-            selected=[];
+            selected = [];
 
-        $target.find(":selected").each(function(index, elem){
+        $target.find(":selected").each(function (index, elem) {
             selected.push($(elem).val());
         });
 
@@ -173,6 +243,28 @@ jQuery(document).ready(function () {
             }
         });
     });
+
+    $('.format-pattern .delete-file').click(deleteFile);
+
+    function deleteFile()
+    {
+        var that = $(this);
+
+        $.ajax({
+            url: $('.format-pattern').data('url') + '?remove=1&file=' + that.parent().find('.book-name').text(),
+            success: function (data) {
+                if (data.errors) {
+                    for (var i in data.errors) {
+                        $.notify(data.errors[i], {
+                            className: 'error'
+                        });
+                    }
+                } else {
+                    that.closest(".format-pattern").remove();
+                }
+            }
+        });
+    }
 
     var delay = (function () {
         var timer = 0;

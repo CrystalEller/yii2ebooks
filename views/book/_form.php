@@ -12,8 +12,10 @@ use yii\helpers\Url;
 
 $this->registerCssFile("/css/bootstrap-select/bootstrap-select.min.css");
 
-$this->registerJsFile('/js/bootstrap-select/bootstrap-select.min.js', ['depends' => [\yii\web\JqueryAsset::className()]]);
+$this->registerJsFile('/js/bootstrap-select/bootstrap-select.min.js',
+    ['depends' => [\yii\web\JqueryAsset::className(), 'yii\bootstrap\BootstrapPluginAsset']]);
 $this->registerJsFile('/js/book/form.js', ['depends' => [\yii\web\JqueryAsset::className()]]);
+
 
 $formData = Yii::$app->session['book-form'];
 ?>
@@ -249,10 +251,27 @@ $formData = Yii::$app->session['book-form'];
 
         <div class="col-lg-10">
             <div class="row format-select">
-                <div class="col-lg-12 hide format-pattern">
+                <?php $files = glob(\Yii::$app->basePath . '/files/tmp/book-form/1/book-file/*'); ?>
+                <?php if (!empty($files)): ?>
+                    <?php foreach ($files as $file): ?>
+                        <div class="col-lg-12 format-pattern" data-url="<?php echo URL::toRoute('book/file', true); ?>">
+                            <span
+                                class="file-extension"><?php echo strtoupper(pathinfo($file, PATHINFO_EXTENSION)) . ': '; ?></span>
+                            <span class="book-name"><?php echo basename($file); ?></span>
+                            <button type="button" class="btn btn-default delete-file">Delete</button>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                <div class="col-lg-12 hide format-pattern" data-url="<?php echo URL::toRoute('book/file', true); ?>">
                     <span class="book-name"></span>
-                    <input type='file' name="file[]" class="hide upload-book">
+                    <input type='file' name="bookFile[]" class="hide upload-book">
                     <input type='hidden' name="format[]" class="book-format">
+
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 0%;">
+                            0%
+                        </div>
+                    </div>
                     <button type="button" class="btn btn-default delete-file">Delete</button>
                 </div>
                 <div class="col-lg-4 row">
@@ -288,7 +307,14 @@ $formData = Yii::$app->session['book-form'];
         </div>
         <div class="col-lg-5">
             <div id="image-wrapper" class="well well-sm" style="width: 220px">
-                <img src="" alt="" width="200"/>
+                <?php $files = glob(\Yii::$app->basePath . '/web/image/book/tmp/1/*'); ?>
+                <?php if (!empty($files)): ?>
+                    <?php foreach ($files as $file): ?>
+                        <img src="<?php echo '/image/book/tmp/1/' . basename($file); ?>" alt="" width="200"/>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <img data-url="<?php echo URL::toRoute('book/file', true); ?>" src="" alt="" width="200"/>
+                <?php endif; ?>
             </div>
             <input type='file' id="upload-image" name="image" class="hide" accept=".jpg, .png, .jpeg">
             <button id="image" type="button" class="btn btn-default">Upload Title Image</button>

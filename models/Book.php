@@ -31,6 +31,8 @@ class Book extends ActiveRecord
     public $tags;
     public $authors;
     public $formats;
+    public $imageFile;
+    public $bookFile;
 
     /**
      * @inheritdoc
@@ -55,6 +57,13 @@ class Book extends ActiveRecord
             [['publisherId', 'pages', 'categoryId', 'languageId', 'year'], 'integer'],
             ['year', 'number', 'max' => 9999, 'min' => 1],
             ['raiting', 'number', 'max' => 5, 'min' => 1],
+
+            ['imageFile', 'file',
+                'extensions' => 'jpeg, jpg, png',
+                'maxSize' => 2 * pow(10, 6)],
+            ['bookFile', 'file',
+                'extensions' => array_column(Format::find()->asArray()->all(), 'name'),
+                'maxSize' => 150 * pow(10, 6)],
 
             ['publisherId', 'exist', 'targetClass' => 'app\models\Publisher', 'targetAttribute' => 'id'],
             ['categoryId', 'exist', 'targetClass' => 'app\models\Category', 'targetAttribute' => 'id'],
@@ -120,13 +129,13 @@ class Book extends ActiveRecord
     {
         if (!$insert) {
             Yii::$app->db->createCommand()
-                ->delete('author_book',['bookId'=>$this->id])
+                ->delete('author_book', ['bookId' => $this->id])
                 ->execute();
             Yii::$app->db->createCommand()
-                ->delete('book_format',['bookId'=>$this->id])
+                ->delete('book_format', ['bookId' => $this->id])
                 ->execute();
             Yii::$app->db->createCommand()
-                ->delete('book_tag',['bookId'=>$this->id])
+                ->delete('book_tag', ['bookId' => $this->id])
                 ->execute();
         }
 
